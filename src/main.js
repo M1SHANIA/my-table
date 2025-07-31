@@ -1,3 +1,4 @@
+// Импортируем компонент таблицы
 import "./components/my-table.js";
 
 // Sample data

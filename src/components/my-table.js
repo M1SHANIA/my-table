@@ -2,9 +2,11 @@ import { LitElement, html, css } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { tableStyles } from './my-table-styles.js';
 
+// Главный компонент таблицы
 export class MyTable extends LitElement {
   static styles = [tableStyles];
 
+  // Описываем публичные и внутренние свойства компонента
   static properties = {
     // Data
     columns: { type: Array },
@@ -48,32 +50,36 @@ export class MyTable extends LitElement {
   constructor() {
     super();
 
-    // Initialize properties
+    // Инициализация публичных свойств
     this.columns = [];
     this.data = [];
     this.dataUrl = '';
 
+    // Параметры пагинации
     this.pageSize = 20;
     this.currentPage = 1;
     this.pageSizes = [10, 20, 50, 100];
 
-    this.sortable = true;
-    this.filterable = true;
-    this.editable = false;
-    this.selectable = false;
-    this.groupable = false;
+    // Флаги функционала
+    this.sortable = true;      // Сортировка
+    this.filterable = true;    // Фильтрация
+    this.editable = false;     // Редактирование
+    this.selectable = false;   // Выбор строк
+    this.groupable = false;    // Группировка
 
+    // Ленивая загрузка
     this.lazyLoad = false;
     this.loadThreshold = 100;
     this.totalItems = 0;
 
+    // Внешний вид
     this.height = 'auto';
     this.striped = true;
     this.bordered = true;
     this.hover = true;
     this.dense = false;
 
-    // Internal state
+    // Внутреннее состояние
     this._filteredData = [];
     this._sortConfig = { column: null, direction: null };
     this._filters = {};
@@ -83,6 +89,7 @@ export class MyTable extends LitElement {
     this._error = null;
   }
 
+  // Хук жизненного цикла: компонент добавлен в DOM
   connectedCallback() {
     super.connectedCallback();
 
@@ -95,11 +102,13 @@ export class MyTable extends LitElement {
     }
   }
 
+  // Хук жизненного цикла: компонент удалён из DOM
   disconnectedCallback() {
     super.disconnectedCallback();
     this._detachScrollHandler();
   }
 
+  // Хук: обновление компонента при изменении свойств
   updated(changedProperties) {
     if (changedProperties.has('data') || changedProperties.has('_filters')) {
       this._applyFilters();
@@ -110,6 +119,7 @@ export class MyTable extends LitElement {
     }
   }
 
+  // Главный метод рендера
   render() {
     return html`
       <div class="table-container" style="height: ${this.height}">
@@ -130,6 +140,7 @@ export class MyTable extends LitElement {
     `;
   }
 
+  // Рендер заголовка таблицы
   _renderHeader() {
     return html`
       <thead>
@@ -159,6 +170,7 @@ export class MyTable extends LitElement {
     `;
   }
 
+  // Рендер тела таблицы
   _renderBody() {
     const pageData = this._getPageData();
 
@@ -201,6 +213,7 @@ export class MyTable extends LitElement {
     `;
   }
 
+  // Рендер отдельной ячейки
   _renderCell(row, column, rowIndex) {
     const value = row[column.key];
     const isEditing = this._editingCell?.rowIndex === rowIndex &&
@@ -217,6 +230,7 @@ export class MyTable extends LitElement {
     return value ?? '';
   }
 
+  // Рендер поля для редактирования ячейки
   _renderCellEditor(value, column) {
     const type = column.type || 'text';
 
@@ -257,6 +271,7 @@ export class MyTable extends LitElement {
     }
   }
 
+  // Рендер фильтра для столбца
   _renderFilter(column) {
     const type = column.type || 'text';
 
@@ -278,6 +293,7 @@ export class MyTable extends LitElement {
     `;
   }
 
+  // Рендер индикатора сортировки
   _renderSortIndicator(columnKey) {
     if (this._sortConfig.column !== columnKey) {
       return html`<span class="sort-indicator">↕</span>`;
@@ -290,6 +306,7 @@ export class MyTable extends LitElement {
     `;
   }
 
+  // Рендер пагинации
   _renderPagination() {
     const totalPages = Math.ceil(this._filteredData.length / this.pageSize);
 
@@ -330,6 +347,7 @@ export class MyTable extends LitElement {
     `;
   }
 
+  // Рендер состояния загрузки
   _renderLoading() {
     return html`
       <div class="loading-overlay">
@@ -339,6 +357,7 @@ export class MyTable extends LitElement {
     `;
   }
 
+  // Рендер ошибки
   _renderError() {
     return html`
       <div class="error-message">
@@ -349,6 +368,7 @@ export class MyTable extends LitElement {
   }
 
   // Data handling methods
+  // Загрузка данных с сервера
   async _loadData() {
     this._loading = true;
     this._error = null;
@@ -375,6 +395,7 @@ export class MyTable extends LitElement {
     }
   }
 
+  // Применение фильтров к данным
   _applyFilters() {
     if (Object.keys(this._filters).length === 0) {
       this._filteredData = [...this.data];
@@ -393,6 +414,7 @@ export class MyTable extends LitElement {
     });
   }
 
+  // Применение сортировки к данным
   _applySort() {
     if (!this._sortConfig.column) return;
 
@@ -411,6 +433,7 @@ export class MyTable extends LitElement {
     });
   }
 
+  // Получить данные для текущей страницы
   _getPageData() {
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
@@ -418,6 +441,7 @@ export class MyTable extends LitElement {
   }
 
   // Event handlers
+  // Обработчик сортировки по столбцу
   _handleSort(column) {
     if (!this.sortable) return;
 
@@ -436,6 +460,7 @@ export class MyTable extends LitElement {
     }));
   }
 
+  // Обработчик изменения фильтра
   _handleFilter(column, value) {
     if (value) {
       this._filters[column] = value;
@@ -450,6 +475,7 @@ export class MyTable extends LitElement {
     }));
   }
 
+  // Обработчик выбора строки
   _handleRowSelect(index) {
     if (this._selectedRows.has(index)) {
       this._selectedRows.delete(index);
@@ -464,6 +490,7 @@ export class MyTable extends LitElement {
     }));
   }
 
+  // Обработчик выбора всех строк на странице
   _handleSelectAll(e) {
     if (e.target.checked) {
       const pageData = this._getPageData();
@@ -475,6 +502,7 @@ export class MyTable extends LitElement {
     this._selectedRows = new Set(this._selectedRows);
   }
 
+  // Обработчик начала редактирования ячейки
   _handleCellEdit(row, column, rowIndex) {
     if (!this.editable || column.editable === false) return;
 
@@ -489,6 +517,7 @@ export class MyTable extends LitElement {
     });
   }
 
+  // Обработчик завершения редактирования ячейки
   _handleEditComplete(e) {
     const newValue = e.target.value;
     const { rowIndex, column, originalValue } = this._editingCell;
@@ -505,6 +534,7 @@ export class MyTable extends LitElement {
     this._editingCell = null;
   }
 
+  // Обработчик нажатия клавиш при редактировании
   _handleEditKeydown(e) {
     if (e.key === 'Escape') {
       this._editingCell = null;
@@ -513,6 +543,7 @@ export class MyTable extends LitElement {
     }
   }
 
+  // Переключение страницы
   _changePage(page) {
     this.currentPage = page;
     this.dispatchEvent(new CustomEvent('table-page-changed', {
@@ -520,12 +551,14 @@ export class MyTable extends LitElement {
     }));
   }
 
+  // Изменение размера страницы
   _changePageSize(size) {
     this.pageSize = size;
     this.currentPage = 1;
   }
 
   // Utility methods
+  // Получить CSS-классы для таблицы
   _getTableClasses() {
     return [
       'table',
@@ -536,6 +569,7 @@ export class MyTable extends LitElement {
     ].filter(Boolean).join(' ');
   }
 
+  // Получить CSS-классы для заголовка столбца
   _getHeaderClass(column) {
     return [
       'header-cell',
@@ -544,6 +578,7 @@ export class MyTable extends LitElement {
     ].filter(Boolean).join(' ');
   }
 
+  // Получить CSS-классы для строки
   _getRowClass(row, index) {
     return [
       'table-row',
@@ -551,6 +586,7 @@ export class MyTable extends LitElement {
     ].filter(Boolean).join(' ');
   }
 
+  // Получить CSS-классы для ячейки
   _getCellClass(column) {
     return [
       'table-cell',
@@ -559,12 +595,14 @@ export class MyTable extends LitElement {
     ].filter(Boolean).join(' ');
   }
 
+  // Проверка: все строки на странице выбраны?
   _isAllSelected() {
     const pageData = this._getPageData();
     return pageData.length > 0 &&
       pageData.every((_, index) => this._selectedRows.has(index));
   }
 
+  // Получить уникальные значения для фильтрации
   _getUniqueValues(column) {
     const values = new Set();
     this.data.forEach(row => {
@@ -575,65 +613,79 @@ export class MyTable extends LitElement {
     return Array.from(values);
   }
 
+  // Повторная попытка загрузки данных
   _retry() {
     if (this.dataUrl) {
       this._loadData();
     }
   }
 
+  // Подключить обработчик скролла для ленивой загрузки
   _attachScrollHandler() {
     // Implementation for lazy loading scroll handler
   }
 
+  // Отключить обработчик скролла
   _detachScrollHandler() {
     // Clean up scroll handler
   }
 
   // Public API methods
+  // Публичный метод: задать данные
   setData(data) {
     this.data = data;
   }
 
+  // Публичный метод: добавить данные
   appendData(data) {
     this.data = [...this.data, ...data];
   }
 
+  // Публичный метод: обновить строку
   updateRow(index, row) {
     this.data[index] = { ...this.data[index], ...row };
     this.requestUpdate();
   }
 
+  // Публичный метод: удалить строку
   deleteRow(index) {
     this.data.splice(index, 1);
     this.requestUpdate();
   }
 
+  // Публичный метод: установить фильтр
   setFilter(column, value) {
     this._handleFilter(column, value);
   }
 
+  // Публичный метод: сбросить фильтры
   clearFilters() {
     this._filters = {};
   }
 
+  // Публичный метод: сортировать
   sort(column, direction) {
     this._sortConfig = { column, direction };
   }
 
+  // Публичный метод: выбрать строку
   selectRow(index) {
     this._selectedRows.add(index);
     this._selectedRows = new Set(this._selectedRows);
   }
 
+  // Публичный метод: снять выбор строки
   deselectRow(index) {
     this._selectedRows.delete(index);
     this._selectedRows = new Set(this._selectedRows);
   }
 
+  // Публичный метод: получить выбранные строки
   getSelectedRows() {
     return Array.from(this._selectedRows).map(index => this.data[index]);
   }
 
+  // Публичный метод: обновить таблицу
   refresh() {
     if (this.dataUrl) {
       this._loadData();
