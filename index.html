@@ -1,11 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
   <head>
     <meta charset="UTF-8" />
-    <title>My Table Demo</title>
-    <script type="module" src="/src/main.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Table Component</title>
+    <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
-    <my-table></my-table>
+    <div class="container">
+      <h1>My Table Component</h1>
+
+      <div class="controls">
+        <button id="loadData">Načíst data</button>
+        <button id="addRow">Přidat řádek</button>
+        <button id="deleteSelected">Smazat vybrané</button>
+        <button id="clearFilters">Vymazat filtry</button>
+        <button id="exportData">Export do konzole</button>
+        <button id="toggleEdit">Přepnout editaci</button>
+      </div>
+
+      <my-table
+        id="mainTable"
+        page-size="10"
+        editable="true"
+        selectable="true"
+        sortable="true"
+        filterable="true"
+        striped="true"
+        bordered="true"
+        hover="true"
+      >
+      </my-table>
+
+      <div class="event-log">
+        <h3>Event Log:</h3>
+        <div id="eventLog"></div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
