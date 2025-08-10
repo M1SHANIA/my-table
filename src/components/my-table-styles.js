@@ -22,23 +22,81 @@ export const tableStyles = css`
   .table-container {
     position: relative;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    background: white;
+    overflow: hidden;
+  }
+
+  .table-scroll-wrapper {
+    flex: 1;
     overflow: auto;
+    position: relative;
   }
 
   .table-wrapper {
+    min-width: 100%;
+    overflow: visible;
+  }
+
+  /* Sticky header при скролле */
+  .table-container.sticky-header .table-scroll-wrapper {
+    overflow-y: auto;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-container.sticky-header thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--table-header-bg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Стили для скроллбаров */
+  .table-scroll-wrapper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .table-scroll-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+  }
+
+  .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+  }
+
+  .table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  .table-scroll-wrapper::-webkit-scrollbar-corner {
+    background: #f1f1f1;
+  }
+
+  /* Firefox scrollbar */
+  @supports (scrollbar-width: thin) {
+    .table-scroll-wrapper {
+      scrollbar-width: thin;
+      scrollbar-color: #888 #f1f1f1;
+    }
   }
 
   /* Table styles */
   .table {
     width: 100%;
+    min-width: max-content;
     border-collapse: collapse;
     background: white;
   }
 
   .table.bordered {
-    border: 1px solid var(--table-border-color);
+    border: none;
   }
 
   .table.striped tbody tr:nth-child(even) {
@@ -67,6 +125,8 @@ export const tableStyles = css`
     border-bottom: 2px solid var(--table-border-color);
     position: relative;
     user-select: none;
+    white-space: nowrap;
+    min-width: 50px;
   }
 
   th.sortable {
@@ -128,6 +188,13 @@ export const tableStyles = css`
   td {
     padding: var(--table-cell-padding);
     border-bottom: 1px solid var(--table-border-color);
+    white-space: nowrap;
+    min-width: 50px;
+  }
+
+  /* Для колонок, где перенос допустим */
+  .allow-wrap {
+    white-space: normal;
   }
 
   /* Cell alignment */
@@ -142,6 +209,8 @@ export const tableStyles = css`
   /* Select column */
   .select-column {
     width: 40px;
+    min-width: 40px;
+    max-width: 40px;
     text-align: center;
   }
 
@@ -181,7 +250,7 @@ export const tableStyles = css`
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -204,12 +273,12 @@ export const tableStyles = css`
 
   /* Error state */
   .error-message {
-    padding: 20px;
+    position: static;
+    padding: 40px;
     background: #ffebee;
     color: var(--table-error-color);
     text-align: center;
     border-radius: 4px;
-    margin: 20px;
   }
 
   .error-message button {
@@ -235,6 +304,10 @@ export const tableStyles = css`
     padding: 16px;
     border-top: 1px solid var(--table-border-color);
     background: var(--table-header-bg);
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
   }
 
   .pagination button {
@@ -272,13 +345,14 @@ export const tableStyles = css`
     color: #666;
   }
 
+  .items-info {
+    font-size: 0.9em;
+    color: #999;
+    margin-left: 5px;
+  }
+
   /* Responsive */
   @media (max-width: 768px) {
-    .table-wrapper {
-      border: 1px solid var(--table-border-color);
-      border-radius: 4px;
-    }
-
     th, td {
       padding: 8px;
       font-size: 14px;
@@ -312,4 +386,36 @@ export const tableStyles = css`
       border: 1px solid #000 !important;
     }
   }
+    @media (max-width: 768px) {
+  table {
+    border: 0;
+  }
+  thead {
+    display: none;
+  }
+  tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 0.5rem;
+    background: #fff;
+    text-align: center; /* центровка текста */
+  }
+  td {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+  }
+  td:last-child {
+    border-bottom: 0;
+  }
+  td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+  }
+}
+
 `;

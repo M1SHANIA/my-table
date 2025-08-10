@@ -32,10 +32,14 @@ export class MyTable extends LitElement {
 
     // Appearance
     height: { type: String },
+    maxHeight: { type: String },  // Новое свойство
+    width: { type: String },       // Новое свойство
+    maxWidth: { type: String },    // Новое свойство
     striped: { type: Boolean },
     bordered: { type: Boolean },
     hover: { type: Boolean },
     dense: { type: Boolean },
+    stickyHeader: { type: Boolean },
 
     // Internal state
     _filteredData: { state: true },
@@ -74,10 +78,14 @@ export class MyTable extends LitElement {
 
     // Внешний вид
     this.height = 'auto';
+    this.maxHeight = '600px';    // Значение по умолчанию
+    this.width = '100%';         // Значение по умолчанию
+    this.maxWidth = '100%';      // Значение по умолчанию
     this.striped = true;
     this.bordered = true;
     this.hover = true;
     this.dense = false;
+    this.stickyHeader = true;
 
     // Внутреннее состояние
     this._filteredData = [];
@@ -121,17 +129,30 @@ export class MyTable extends LitElement {
 
   // Главный метод рендера
   render() {
+    const containerStyles = {
+      height: this.height,
+      maxHeight: this.maxHeight,
+      width: this.width,
+      maxWidth: this.maxWidth
+    };
+
     return html`
-      <div class="table-container" style="height: ${this.height}">
+      <div class="table-container ${this.stickyHeader ? 'sticky-header' : ''}" 
+           style="${Object.entries(containerStyles)
+        .filter(([_, value]) => value && value !== 'auto')
+        .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`)
+        .join('; ')}">
         ${this._loading ? this._renderLoading() : ''}
         ${this._error ? this._renderError() : ''}
         
         ${!this._loading && !this._error ? html`
-          <div class="table-wrapper">
-            <table class="${this._getTableClasses()}">
-              ${this._renderHeader()}
-              ${this._renderBody()}
-            </table>
+          <div class="table-scroll-wrapper">
+            <div class="table-wrapper">
+              <table class="${this._getTableClasses()}">
+                ${this._renderHeader()}
+                ${this._renderBody()}
+              </table>
+            </div>
           </div>
           
           ${this._renderPagination()}
@@ -308,9 +329,12 @@ export class MyTable extends LitElement {
 
   // Рендер пагинации
   _renderPagination() {
-    const totalPages = Math.ceil(this._filteredData.length / this.pageSize);
+    const totalPages = Math.ceil(this._filteredData.length / this.pageSize) || 1; // Минимум 1 страница
+    const totalItems = this._filteredData.length;
+    const startItem = totalItems > 0 ? (this.currentPage - 1) * this.pageSize + 1 : 0;
+    const endItem = Math.min(this.currentPage * this.pageSize, totalItems);
 
-    if (totalPages <= 1) return '';
+    // Убираем условие "if (totalPages <= 1) return '';" - теперь пагинатор всегда показывается
 
     return html`
       <div class="pagination">
@@ -325,6 +349,11 @@ export class MyTable extends LitElement {
         
         <span class="page-info">
           Stránka ${this.currentPage} z ${totalPages}
+          ${totalItems > 0 ? html`
+            <span class="items-info">
+              (${startItem}-${endItem} z ${totalItems})
+            </span>
+          ` : ''}
         </span>
         
         <button @click=${() => this._changePage(this.currentPage + 1)} 
