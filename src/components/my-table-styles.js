@@ -11,6 +11,7 @@ export const tableStyles = css`
     --table-row-selected: #e3f2fd;
     --table-primary-color: #1976d2;
     --table-error-color: #d32f2f;
+    --table-success-color: #4caf50;
     --table-cell-padding: 12px;
     --table-dense-padding: 8px;
   }
@@ -28,6 +29,159 @@ export const tableStyles = css`
     border-radius: 4px;
     background: white;
     overflow: hidden;
+  }
+
+  /* Форма добавления новой записи */
+  .add-form-container {
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 2px solid var(--table-primary-color);
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .add-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .add-form-header h3 {
+    margin: 0;
+    color: var(--table-header-color);
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .add-form-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-field label {
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+    font-size: 14px;
+  }
+
+  .form-field input,
+  .form-field select {
+    padding: 8px 12px;
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+
+  .form-field input:focus,
+  .form-field select:focus {
+    outline: none;
+    border-color: var(--table-primary-color);
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+  }
+
+  .add-form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--table-primary-color);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #1565c0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-secondary {
+    background: white;
+    color: #666;
+    border: 1px solid var(--table-border-color);
+  }
+
+  .btn-secondary:hover {
+    background: #f5f5f5;
+  }
+
+  /* Индикатор загрузки для lazy loading */
+  .loading-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 10px;
+    color: #666;
+    background: #f9f9f9;
+    border-top: 1px solid var(--table-border-color);
+  }
+
+  .spinner-small {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--table-border-color);
+    border-top-color: var(--table-primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .no-more-data {
+    text-align: center;
+    padding: 15px;
+    color: #999;
+    font-style: italic;
+    background: #f9f9f9;
+    border-top: 1px solid var(--table-border-color);
   }
 
   .table-scroll-wrapper {
@@ -368,13 +522,18 @@ export const tableStyles = css`
       text-align: center;
       margin: 10px 0;
     }
+
+    .add-form-fields {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* Print styles */
   @media print {
     .filter-row,
     .pagination,
-    .select-column {
+    .select-column,
+    .add-form-container {
       display: none !important;
     }
 
@@ -386,36 +545,37 @@ export const tableStyles = css`
       border: 1px solid #000 !important;
     }
   }
-    @media (max-width: 768px) {
-  table {
-    border: 0;
-  }
-  thead {
-    display: none;
-  }
-  tr {
-    display: block;
-    margin-bottom: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 0.5rem;
-    background: #fff;
-    text-align: center; /* центровка текста */
-  }
-  td {
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem;
-    border-bottom: 1px solid #eee;
-  }
-  td:last-child {
-    border-bottom: 0;
-  }
-  td::before {
-    content: attr(data-label);
-    font-weight: bold;
-    margin-bottom: 0.25rem;
-  }
-}
 
+  /* Mobile responsive table */
+  @media (max-width: 768px) {
+    table {
+      border: 0;
+    }
+    thead {
+      display: none;
+    }
+    tr {
+      display: block;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 0.5rem;
+      background: #fff;
+      text-align: center;
+    }
+    td {
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+    }
+    td:last-child {
+      border-bottom: 0;
+    }
+    td::before {
+      content: attr(data-label);
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+  }
 `;

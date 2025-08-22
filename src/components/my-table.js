@@ -29,12 +29,13 @@ export class MyTable extends LitElement {
     lazyLoad: { type: Boolean },
     loadThreshold: { type: Number },
     totalItems: { type: Number },
+    hasMore: { type: Boolean },
 
     // Appearance
     height: { type: String },
-    maxHeight: { type: String },  // Новое свойство
-    width: { type: String },       // Новое свойство
-    maxWidth: { type: String },    // Новое свойство
+    maxHeight: { type: String },
+    width: { type: String },
+    maxWidth: { type: String },
     striped: { type: Boolean },
     bordered: { type: Boolean },
     hover: { type: Boolean },
@@ -48,7 +49,10 @@ export class MyTable extends LitElement {
     _selectedRows: { state: true },
     _editingCell: { state: true },
     _loading: { state: true },
-    _error: { state: true }
+    _error: { state: true },
+    _showAddForm: { state: true },
+    _newRowData: { state: true },
+    _loadingMore: { state: true }
   };
 
   constructor() {
@@ -65,22 +69,23 @@ export class MyTable extends LitElement {
     this.pageSizes = [10, 20, 50, 100];
 
     // Флаги функционала
-    this.sortable = true;      // Сортировка
-    this.filterable = true;    // Фильтрация
-    this.editable = false;     // Редактирование
-    this.selectable = false;   // Выбор строк
-    this.groupable = false;    // Группировка
+    this.sortable = true;
+    this.filterable = true;
+    this.editable = false;
+    this.selectable = false;
+    this.groupable = false;
 
     // Ленивая загрузка
     this.lazyLoad = false;
     this.loadThreshold = 100;
     this.totalItems = 0;
+    this.hasMore = true;
 
     // Внешний вид
     this.height = 'auto';
-    this.maxHeight = '600px';    // Значение по умолчанию
-    this.width = '100%';         // Значение по умолчанию
-    this.maxWidth = '100%';      // Значение по умолчанию
+    this.maxHeight = '600px';
+    this.width = '100%';
+    this.maxWidth = '100%';
     this.striped = true;
     this.bordered = true;
     this.hover = true;
@@ -95,6 +100,12 @@ export class MyTable extends LitElement {
     this._editingCell = null;
     this._loading = false;
     this._error = null;
+    this._showAddForm = false;
+    this._newRowData = {};
+    this._loadingMore = false;
+
+    // Привязываем обработчик скролла
+    this._handleScroll = this._handleScroll.bind(this);
   }
 
   // Хук жизненного цикла: компонент добавлен в DOM
@@ -125,6 +136,14 @@ export class MyTable extends LitElement {
     if (changedProperties.has('_filteredData') || changedProperties.has('_sortConfig')) {
       this._applySort();
     }
+
+    if (changedProperties.has('lazyLoad')) {
+      if (this.lazyLoad) {
+        this._attachScrollHandler();
+      } else {
+        this._detachScrollHandler();
+      }
+    }
   }
 
   // Главный метод рендера
@@ -146,19 +165,96 @@ export class MyTable extends LitElement {
         ${this._error ? this._renderError() : ''}
         
         ${!this._loading && !this._error ? html`
-          <div class="table-scroll-wrapper">
+          ${this._showAddForm ? this._renderAddForm() : ''}
+          
+          <div class="table-scroll-wrapper" @scroll=${this.lazyLoad ? this._handleScroll : null}>
             <div class="table-wrapper">
               <table class="${this._getTableClasses()}">
                 ${this._renderHeader()}
                 ${this._renderBody()}
               </table>
+              
+              ${this._loadingMore ? html`
+                <div class="loading-more">
+                  <div class="spinner-small"></div>
+                  <span>Načítání dalších dat...</span>
+                </div>
+              ` : ''}
+              
+              ${this.lazyLoad && !this.hasMore && this._filteredData.length > 0 ? html`
+                <div class="no-more-data">
+                  Všechna data načtena
+                </div>
+              ` : ''}
             </div>
           </div>
           
-          ${this._renderPagination()}
+          ${!this.lazyLoad ? this._renderPagination() : ''}
         ` : ''}
       </div>
     `;
+  }
+
+  // Рендер формы добавления новой записи
+  _renderAddForm() {
+    return html`
+      <div class="add-form-container">
+        <div class="add-form-header">
+          <h3>Přidat nový záznam</h3>
+          <button class="close-btn" @click=${() => this._closeAddForm()}>✕</button>
+        </div>
+        <div class="add-form-fields">
+          ${this.columns.filter(col => col.key !== 'id' && col.editable !== false).map(column => html`
+            <div class="form-field">
+              <label>${column.label}:</label>
+              ${this._renderFormInput(column)}
+            </div>
+          `)}
+        </div>
+        <div class="add-form-actions">
+          <button class="btn-primary" @click=${() => this._saveNewRow()}>Uložit</button>
+          <button class="btn-secondary" @click=${() => this._closeAddForm()}>Zrušit</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Рендер поля ввода для формы
+  _renderFormInput(column) {
+    const type = column.type || 'text';
+    const value = this._newRowData[column.key] || '';
+
+    switch (type) {
+      case 'number':
+        return html`
+          <input type="number" 
+                 .value=${value}
+                 @input=${(e) => this._updateNewRowData(column.key, e.target.value)}>
+        `;
+      case 'date':
+        return html`
+          <input type="date" 
+                 .value=${value}
+                 @input=${(e) => this._updateNewRowData(column.key, e.target.value)}>
+        `;
+      case 'select':
+        return html`
+          <select @change=${(e) => this._updateNewRowData(column.key, e.target.value)}>
+            <option value="">Vyberte...</option>
+            ${column.options?.map(option => html`
+              <option value=${option.value}>
+                ${option.label}
+              </option>
+            `)}
+          </select>
+        `;
+      default:
+        return html`
+          <input type="text" 
+                 .value=${value}
+                 @input=${(e) => this._updateNewRowData(column.key, e.target.value)}>
+        `;
+    }
   }
 
   // Рендер заголовка таблицы
@@ -193,7 +289,7 @@ export class MyTable extends LitElement {
 
   // Рендер тела таблицы
   _renderBody() {
-    const pageData = this._getPageData();
+    const pageData = this.lazyLoad ? this._filteredData : this._getPageData();
 
     if (pageData.length === 0) {
       return html`
@@ -210,26 +306,29 @@ export class MyTable extends LitElement {
 
     return html`
       <tbody>
-        ${pageData.map((row, index) => html`
-          <tr class="${this._getRowClass(row, index)}"
-              @click=${() => this._handleRowClick(row, index)}>
-            ${this.selectable ? html`
-              <td class="select-column">
-                <input type="checkbox"
-                       .checked=${this._selectedRows.has(index)}
-                       @click=${(e) => e.stopPropagation()}
-                       @change=${() => this._handleRowSelect(index)}>
-              </td>
-            ` : ''}
-            
-            ${this.columns.map(column => html`
-              <td class="${this._getCellClass(column)}"
-                  @dblclick=${() => this._handleCellEdit(row, column, index)}>
-                ${this._renderCell(row, column, index)}
-              </td>
-            `)}
-          </tr>
-        `)}
+        ${pageData.map((row, index) => {
+      const actualIndex = this.lazyLoad ? index : (this.currentPage - 1) * this.pageSize + index;
+      return html`
+            <tr class="${this._getRowClass(row, actualIndex)}"
+                @click=${() => this._handleRowClick(row, actualIndex)}>
+              ${this.selectable ? html`
+                <td class="select-column">
+                  <input type="checkbox"
+                         .checked=${this._selectedRows.has(row.id || actualIndex)}
+                         @click=${(e) => e.stopPropagation()}
+                         @change=${() => this._handleRowSelect(row, actualIndex)}>
+                </td>
+              ` : ''}
+              
+              ${this.columns.map(column => html`
+                <td class="${this._getCellClass(column)}"
+                    @dblclick=${() => this._handleCellEdit(row, column, actualIndex)}>
+                  ${this._renderCell(row, column, actualIndex)}
+                </td>
+              `)}
+            </tr>
+          `;
+    })}
       </tbody>
     `;
   }
@@ -329,12 +428,10 @@ export class MyTable extends LitElement {
 
   // Рендер пагинации
   _renderPagination() {
-    const totalPages = Math.ceil(this._filteredData.length / this.pageSize) || 1; // Минимум 1 страница
+    const totalPages = Math.ceil(this._filteredData.length / this.pageSize) || 1;
     const totalItems = this._filteredData.length;
     const startItem = totalItems > 0 ? (this.currentPage - 1) * this.pageSize + 1 : 0;
     const endItem = Math.min(this.currentPage * this.pageSize, totalItems);
-
-    // Убираем условие "if (totalPages <= 1) return '';" - теперь пагинатор всегда показывается
 
     return html`
       <div class="pagination">
@@ -398,21 +495,83 @@ export class MyTable extends LitElement {
 
   // Data handling methods
   // Загрузка данных с сервера
-  async _loadData() {
-    this._loading = true;
+  async _loadData(append = false) {
+    if (!this.dataUrl) return;
+
+    this._loading = !append;
+    this._loadingMore = append;
     this._error = null;
 
     try {
-      const response = await fetch(this.dataUrl);
+      let url = this.dataUrl;
+
+      // Добавляем параметры для lazy loading
+      if (this.lazyLoad) {
+        const params = new URLSearchParams();
+        params.append('limit', this.loadThreshold.toString());
+        params.append('offset', append ? this.data.length.toString() : '0');
+
+        // Добавляем фильтры если есть
+        Object.entries(this._filters).forEach(([key, value]) => {
+          if (value) params.append(`filter_${key}`, value);
+        });
+
+        // Добавляем сортировку если есть
+        if (this._sortConfig.column) {
+          params.append('sort', this._sortConfig.column);
+          params.append('order', this._sortConfig.direction || 'asc');
+        }
+
+        url += (url.includes('?') ? '&' : '?') + params.toString();
+      }
+
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      this.data = Array.isArray(data) ? data : data.content || data.data || [];
+      const result = await response.json();
+
+      // Обработка разных форматов ответа
+      let newData = [];
+      if (Array.isArray(result)) {
+        newData = result;
+      } else if (result.data && Array.isArray(result.data)) {
+        newData = result.data;
+        if (result.total !== undefined) {
+          this.totalItems = result.total;
+        }
+        if (result.hasMore !== undefined) {
+          this.hasMore = result.hasMore;
+        }
+      } else if (result.content && Array.isArray(result.content)) {
+        newData = result.content;
+        if (result.totalElements !== undefined) {
+          this.totalItems = result.totalElements;
+        }
+        if (result.last !== undefined) {
+          this.hasMore = !result.last;
+        }
+      } else if (result.items && Array.isArray(result.items)) {
+        newData = result.items;
+        if (result.total !== undefined) {
+          this.totalItems = result.total;
+        }
+      }
+
+      // Если получено меньше записей чем запрошено, значит больше нет
+      if (this.lazyLoad && newData.length < this.loadThreshold) {
+        this.hasMore = false;
+      }
+
+      if (append) {
+        this.data = [...this.data, ...newData];
+      } else {
+        this.data = newData;
+      }
 
       this.dispatchEvent(new CustomEvent('table-data-loaded', {
-        detail: { data: this.data }
+        detail: { data: newData, total: this.data.length, append }
       }));
     } catch (error) {
       this._error = error.message;
@@ -421,6 +580,7 @@ export class MyTable extends LitElement {
       }));
     } finally {
       this._loading = false;
+      this._loadingMore = false;
     }
   }
 
@@ -470,6 +630,32 @@ export class MyTable extends LitElement {
   }
 
   // Event handlers
+  // Обработчик скролла для lazy loading
+  _handleScroll(e) {
+    if (!this.lazyLoad || this._loadingMore || !this.hasMore) return;
+
+    const scrollElement = e.target;
+    const scrollPosition = scrollElement.scrollTop + scrollElement.clientHeight;
+    const scrollHeight = scrollElement.scrollHeight;
+
+    // Загружаем когда приближаемся к концу (80% прокручено)
+    if (scrollPosition > scrollHeight * 0.8) {
+      this._loadMoreData();
+    }
+  }
+
+  // Загрузка дополнительных данных
+  async _loadMoreData() {
+    if (this.dataUrl) {
+      await this._loadData(true);
+    } else {
+      // Если нет URL, просто показываем больше локальных данных
+      this.dispatchEvent(new CustomEvent('table-load-more', {
+        detail: { currentCount: this._filteredData.length }
+      }));
+    }
+  }
+
   // Обработчик сортировки по столбцу
   _handleSort(column) {
     if (!this.sortable) return;
@@ -482,6 +668,13 @@ export class MyTable extends LitElement {
       }
     } else {
       this._sortConfig = { column, direction: 'asc' };
+    }
+
+    // Если используется серверная загрузка с lazy loading, перезагружаем данные
+    if (this.lazyLoad && this.dataUrl) {
+      this.data = [];
+      this.hasMore = true;
+      this._loadData();
     }
 
     this.dispatchEvent(new CustomEvent('table-sort-changed', {
@@ -499,36 +692,69 @@ export class MyTable extends LitElement {
 
     this._filters = { ...this._filters };
 
+    // Если используется серверная загрузка с lazy loading, перезагружаем данные
+    if (this.lazyLoad && this.dataUrl) {
+      this.data = [];
+      this.hasMore = true;
+      this._loadData();
+    }
+
     this.dispatchEvent(new CustomEvent('table-filter-changed', {
       detail: { filters: this._filters }
     }));
   }
 
   // Обработчик выбора строки
-  _handleRowSelect(index) {
-    if (this._selectedRows.has(index)) {
-      this._selectedRows.delete(index);
+  _handleRowSelect(row, index) {
+    const key = row.id || index;
+
+    if (this._selectedRows.has(key)) {
+      this._selectedRows.delete(key);
     } else {
-      this._selectedRows.add(index);
+      this._selectedRows.add(key);
     }
 
     this._selectedRows = new Set(this._selectedRows);
 
     this.dispatchEvent(new CustomEvent('table-selection-changed', {
-      detail: { selected: Array.from(this._selectedRows) }
+      detail: {
+        selected: Array.from(this._selectedRows),
+        rows: this.getSelectedRows()
+      }
     }));
   }
 
   // Обработчик выбора всех строк на странице
   _handleSelectAll(e) {
+    const pageData = this.lazyLoad ? this._filteredData : this._getPageData();
+
     if (e.target.checked) {
-      const pageData = this._getPageData();
-      pageData.forEach((_, index) => this._selectedRows.add(index));
+      pageData.forEach(row => {
+        const key = row.id || this.data.indexOf(row);
+        this._selectedRows.add(key);
+      });
     } else {
-      this._selectedRows.clear();
+      pageData.forEach(row => {
+        const key = row.id || this.data.indexOf(row);
+        this._selectedRows.delete(key);
+      });
     }
 
     this._selectedRows = new Set(this._selectedRows);
+
+    this.dispatchEvent(new CustomEvent('table-selection-changed', {
+      detail: {
+        selected: Array.from(this._selectedRows),
+        rows: this.getSelectedRows()
+      }
+    }));
+  }
+
+  // Обработчик клика по строке
+  _handleRowClick(row, index) {
+    this.dispatchEvent(new CustomEvent('table-row-click', {
+      detail: { row, index }
+    }));
   }
 
   // Обработчик начала редактирования ячейки
@@ -552,11 +778,12 @@ export class MyTable extends LitElement {
     const { rowIndex, column, originalValue } = this._editingCell;
 
     if (newValue !== originalValue) {
-      const row = this._getPageData()[rowIndex];
+      const pageData = this.lazyLoad ? this._filteredData : this._getPageData();
+      const row = pageData[rowIndex];
       row[column] = newValue;
 
       this.dispatchEvent(new CustomEvent('table-cell-edited', {
-        detail: { rowIndex, column, oldValue: originalValue, newValue }
+        detail: { row, rowIndex, column, oldValue: originalValue, newValue }
       }));
     }
 
@@ -586,6 +813,40 @@ export class MyTable extends LitElement {
     this.currentPage = 1;
   }
 
+  // Форма добавления новой записи
+  _updateNewRowData(key, value) {
+    this._newRowData = {
+      ...this._newRowData,
+      [key]: value
+    };
+  }
+
+  _saveNewRow() {
+    // Генерируем ID для новой записи
+    const newId = this.data.length > 0
+      ? Math.max(...this.data.map(row => row.id || 0)) + 1
+      : 1;
+
+    const newRow = {
+      id: newId,
+      ...this._newRowData
+    };
+
+    // Добавляем в начало массива
+    this.data = [newRow, ...this.data];
+
+    this.dispatchEvent(new CustomEvent('table-row-added', {
+      detail: { row: newRow }
+    }));
+
+    this._closeAddForm();
+  }
+
+  _closeAddForm() {
+    this._showAddForm = false;
+    this._newRowData = {};
+  }
+
   // Utility methods
   // Получить CSS-классы для таблицы
   _getTableClasses() {
@@ -609,9 +870,10 @@ export class MyTable extends LitElement {
 
   // Получить CSS-классы для строки
   _getRowClass(row, index) {
+    const key = row.id || index;
     return [
       'table-row',
-      this._selectedRows.has(index) && 'selected'
+      this._selectedRows.has(key) && 'selected'
     ].filter(Boolean).join(' ');
   }
 
@@ -626,9 +888,13 @@ export class MyTable extends LitElement {
 
   // Проверка: все строки на странице выбраны?
   _isAllSelected() {
-    const pageData = this._getPageData();
-    return pageData.length > 0 &&
-      pageData.every((_, index) => this._selectedRows.has(index));
+    const pageData = this.lazyLoad ? this._filteredData : this._getPageData();
+    if (pageData.length === 0) return false;
+
+    return pageData.every(row => {
+      const key = row.id || this.data.indexOf(row);
+      return this._selectedRows.has(key);
+    });
   }
 
   // Получить уникальные значения для фильтрации
@@ -651,12 +917,12 @@ export class MyTable extends LitElement {
 
   // Подключить обработчик скролла для ленивой загрузки
   _attachScrollHandler() {
-    // Implementation for lazy loading scroll handler
+    // Будет использоваться inline обработчик в render методе
   }
 
   // Отключить обработчик скролла
   _detachScrollHandler() {
-    // Clean up scroll handler
+    // Очистка не требуется, так как используем inline обработчик
   }
 
   // Public API methods
@@ -676,9 +942,22 @@ export class MyTable extends LitElement {
     this.requestUpdate();
   }
 
-  // Публичный метод: удалить строку
-  deleteRow(index) {
-    this.data.splice(index, 1);
+  // Публичный метод: удалить строку (исправлено)
+  deleteRow(rowId) {
+    // Удаляем по ID если есть, иначе по индексу
+    if (typeof rowId === 'object' && rowId.id) {
+      this.data = this.data.filter(row => row.id !== rowId.id);
+    } else {
+      const index = this.data.findIndex(row => row.id === rowId);
+      if (index !== -1) {
+        this.data = [...this.data.slice(0, index), ...this.data.slice(index + 1)];
+      }
+    }
+
+    // Удаляем из выбранных
+    this._selectedRows.delete(rowId);
+    this._selectedRows = new Set(this._selectedRows);
+
     this.requestUpdate();
   }
 
@@ -690,6 +969,13 @@ export class MyTable extends LitElement {
   // Публичный метод: сбросить фильтры
   clearFilters() {
     this._filters = {};
+
+    // Если используется серверная загрузка с lazy loading, перезагружаем данные
+    if (this.lazyLoad && this.dataUrl) {
+      this.data = [];
+      this.hasMore = true;
+      this._loadData();
+    }
   }
 
   // Публичный метод: сортировать
@@ -698,29 +984,42 @@ export class MyTable extends LitElement {
   }
 
   // Публичный метод: выбрать строку
-  selectRow(index) {
-    this._selectedRows.add(index);
+  selectRow(rowId) {
+    this._selectedRows.add(rowId);
     this._selectedRows = new Set(this._selectedRows);
   }
 
   // Публичный метод: снять выбор строки
-  deselectRow(index) {
-    this._selectedRows.delete(index);
+  deselectRow(rowId) {
+    this._selectedRows.delete(rowId);
     this._selectedRows = new Set(this._selectedRows);
   }
 
   // Публичный метод: получить выбранные строки
   getSelectedRows() {
-    return Array.from(this._selectedRows).map(index => this.data[index]);
+    return Array.from(this._selectedRows).map(key => {
+      if (typeof key === 'number') {
+        return this.data.find(row => row.id === key) || this.data[key];
+      }
+      return this.data.find(row => row.id === key);
+    }).filter(Boolean);
   }
 
   // Публичный метод: обновить таблицу
   refresh() {
     if (this.dataUrl) {
+      this.data = [];
+      this.hasMore = true;
       this._loadData();
     } else {
       this.requestUpdate();
     }
+  }
+
+  // Публичный метод: показать форму добавления
+  showAddForm() {
+    this._showAddForm = true;
+    this._newRowData = {};
   }
 }
 

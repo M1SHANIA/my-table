@@ -36,7 +36,7 @@ const columns = [
   {
     key: "status", label: "Status", type: "select", sortable: true, filterable: true, formatter: (value) => {
       const color = value === "Aktivní" ? "green" : "red";
-      return `<span style=\"color: ${color}; font-weight: bold;\">${value}</span>`;
+      return `<span style="color: ${color}; font-weight: bold;">${value}</span>`;
     }, options: [
       { value: "Aktivní", label: "Aktivní" },
       { value: "Neaktivní", label: "Neaktivní" }
@@ -47,9 +47,13 @@ const columns = [
 const table = document.getElementById("mainTable");
 const eventLog = document.getElementById("eventLog");
 
+// Nastavení tabulky
 table.columns = columns;
 table.data = sampleData;
+table.selectable = true; // Povolíme výběr řádků pro smazání
+table.editable = true; // Povolíme editaci
 
+// Funkce pro logování událostí
 function logEvent(type, detail) {
   const event = document.createElement("pre");
   event.textContent = `${new Date().toLocaleTimeString()} - ${type}: ${JSON.stringify(detail, null, 2)}`;
@@ -59,15 +63,25 @@ function logEvent(type, detail) {
   }
 }
 
+// Event listeners pro tabulku
 table.addEventListener("table-sort-changed", (e) => logEvent("Sort Changed", e.detail));
 table.addEventListener("table-filter-changed", (e) => logEvent("Filter Changed", e.detail));
-table.addEventListener("table-selection-changed", (e) => logEvent("Selection Changed", e.detail));
+table.addEventListener("table-selection-changed", (e) => logEvent("Selection Changed", { selected: e.detail.selected }));
 table.addEventListener("table-cell-edited", (e) => logEvent("Cell Edited", e.detail));
 table.addEventListener("table-page-changed", (e) => logEvent("Page Changed", e.detail));
+table.addEventListener("table-row-added", (e) => logEvent("Row Added", e.detail));
+table.addEventListener("table-data-loaded", (e) => logEvent("Data Loaded", e.detail));
+table.addEventListener("table-load-more", (e) => logEvent("Load More", e.detail));
+table.addEventListener("table-row-click", (e) => logEvent("Row Clicked", { row: e.detail.row }));
 
-document.getElementById("loadData").addEventListener("click", () => {
+// Tlačítko pro načtení dat ze serveru (simulace)
+document.getElementById("loadData").addEventListener("click", async () => {
+  // Můžete zde zadat skutečnou URL vašeho API
+  // table.dataUrl = "https://jsonplaceholder.typicode.com/users";
+
+  // Nebo použít simulaci s lokálními daty
   const newData = Array.from({ length: 20 }, (_, i) => ({
-    id: sampleData.length + i + 1,
+    id: table.data.length + i + 1,
     name: `Nový uživatel ${i + 1}`,
     age: Math.floor(Math.random() * 40) + 20,
     email: `user${i + 1}@example.com`,
@@ -78,50 +92,109 @@ document.getElementById("loadData").addEventListener("click", () => {
   logEvent("Data Loaded", { count: newData.length });
 });
 
+// Tlačítko pro přidání nového řádku - otevře formulář nahoře
 document.getElementById("addRow").addEventListener("click", () => {
-  const newRow = {
-    id: table.data.length + 1,
-    name: "Nový zaměstnanec",
-    age: 25,
-    email: "new@example.com",
-    department: "IT",
-    status: "Aktivní"
-  };
-  table.appendData([newRow]);
-  logEvent("Row Added", newRow);
+  table.showAddForm();
+  logEvent("Add Form Opened", {});
 });
 
+// Tlačítko pro smazání vybraných řádků - OPRAVENO
 document.getElementById("deleteSelected").addEventListener("click", () => {
   const selected = table.getSelectedRows();
   if (selected.length === 0) {
     alert("Nejsou vybrány žádné řádky");
     return;
   }
+
   if (confirm(`Opravdu chcete smazat ${selected.length} řádků?`)) {
+    // Smažeme řádky podle jejich ID
     selected.forEach((row) => {
-      const index = table.data.findIndex((r) => r.id === row.id);
-      if (index !== -1) {
-        table.deleteRow(index);
+      if (row && row.id) {
+        table.deleteRow(row.id);
       }
     });
     logEvent("Rows Deleted", { count: selected.length });
   }
 });
 
+// Tlačítko pro vyčištění filtrů
 document.getElementById("clearFilters").addEventListener("click", () => {
   table.clearFilters();
   logEvent("Filters Cleared", {});
 });
 
+// Tlačítko pro export dat
 document.getElementById("exportData").addEventListener("click", () => {
   const selected = table.getSelectedRows();
+  const allData = table.data;
+
   console.log("Selected rows:", selected);
-  console.log("All data:", table.data);
-  logEvent("Data Exported", { selectedCount: selected.length, totalCount: table.data.length });
+  console.log("All data:", allData);
+
+  // Můžete zde přidat skutečný export do CSV nebo JSON
+  const exportData = selected.length > 0 ? selected : allData;
+
+  // Příklad exportu do JSON
+  const jsonData = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonData], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `table-export-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  logEvent("Data Exported", {
+    selectedCount: selected.length,
+    totalCount: allData.length,
+    format: "JSON"
+  });
 });
 
+// Tlačítko pro přepnutí režimu editace
 document.getElementById("toggleEdit").addEventListener("click", (e) => {
   table.editable = !table.editable;
   e.target.textContent = table.editable ? "Vypnout editaci" : "Zapnout editaci";
   logEvent("Edit Mode", { enabled: table.editable });
+});
+
+// Demonstrace lazy loading
+document.getElementById("toggleLazyLoad")?.addEventListener("click", (e) => {
+  table.lazyLoad = !table.lazyLoad;
+  if (table.lazyLoad) {
+    table.loadThreshold = 50; // Načte 50 záznamů najednou
+    e.target.textContent = "Vypnout Lazy Loading";
+
+    // Simulace URL pro lazy loading
+    // table.dataUrl = "https://your-api.com/data";
+    // table.refresh();
+  } else {
+    e.target.textContent = "Zapnout Lazy Loading";
+  }
+  logEvent("Lazy Loading", { enabled: table.lazyLoad });
+});
+
+// Demonstrace načítání dat ze serveru
+document.getElementById("loadFromServer")?.addEventListener("click", () => {
+  // Příklad s JSONPlaceholder API
+  table.dataUrl = "https://jsonplaceholder.typicode.com/users";
+
+  // Mapování dat z API na náš formát
+  table.addEventListener("table-data-loaded", (e) => {
+    if (e.detail.data && e.detail.data[0] && e.detail.data[0].username) {
+      // Transformace dat z JSONPlaceholder
+      const transformedData = e.detail.data.map((user, index) => ({
+        id: user.id,
+        name: user.name,
+        age: 20 + (index * 2), // Simulovaný věk
+        email: user.email,
+        department: ["IT", "HR", "Finance", "Marketing"][index % 4],
+        status: index % 3 === 0 ? "Neaktivní" : "Aktivní"
+      }));
+      table.data = transformedData;
+    }
+  }, { once: true });
+
+  table.refresh();
+  logEvent("Loading from Server", { url: table.dataUrl });
 });

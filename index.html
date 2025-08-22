@@ -3,41 +3,126 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Table Component</title>
-    <link rel="stylesheet" href="./src/style.css" />
+    <title>My Table Component - Vylepšená verze</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="/src/main.js"></script>
   </head>
   <body>
     <div class="container">
-      <h1>My Table Component</h1>
+      <h1>Tabulková komponenta my-table</h1>
 
       <div class="controls">
-        <button id="loadData">Načíst data</button>
-        <button id="addRow">Přidat řádek</button>
-        <button id="deleteSelected">Smazat vybrané</button>
-        <button id="clearFilters">Vymazat filtry</button>
-        <button id="exportData">Export do konzole</button>
-        <button id="toggleEdit">Přepnout editaci</button>
+        <button id="addRow">➕ Přidat záznam</button>
+        <button id="deleteSelected">🗑️ Smazat vybrané</button>
+        <button id="loadData">📥 Načíst více dat</button>
+        <button id="clearFilters">🔄 Vyčistit filtry</button>
+        <button id="exportData">💾 Exportovat data</button>
+        <button id="toggleEdit">✏️ Zapnout editaci</button>
+        <button id="toggleLazyLoad">🚀 Zapnout Lazy Loading</button>
+        <button id="loadFromServer">🌐 Načíst ze serveru</button>
       </div>
 
-      <my-table
-        id="mainTable"
-        page-size="10"
-        editable="true"
-        selectable="true"
-        sortable="true"
-        filterable="true"
-        striped="true"
-        bordered="true"
-        hover="true"
-      >
-      </my-table>
+      <my-table id="mainTable"></my-table>
 
       <div class="event-log">
-        <h3>Event Log:</h3>
+        <h3>📋 Log událostí</h3>
         <div id="eventLog"></div>
       </div>
     </div>
 
-    <script type="module" src="./src/main.js"></script>
+    <style>
+      /* Dodatečné styly pro demo */
+      .container {
+        max-width: 1400px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .controls button {
+        padding: 10px 16px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .controls button:hover {
+        background: #1976d2;
+        color: white;
+        border-color: #1976d2;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .event-log {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .event-log h3 {
+        margin-top: 0;
+        color: #666;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 10px;
+      }
+
+      .event-log pre {
+        margin: 10px 0;
+        padding: 10px;
+        background: white;
+        border-radius: 4px;
+        font-size: 12px;
+        border-left: 3px solid #1976d2;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .info {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        color: #1565c0;
+        border-left: 4px solid #1976d2;
+      }
+
+      .info ul {
+        list-style-type: disc;
+      }
+
+      .info li {
+        margin: 5px 0;
+      }
+
+      /* Animace pro tlačítka */
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.4);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+        }
+      }
+
+      .controls button:active {
+        animation: pulse 0.5s;
+      }
+    </style>
   </body>
 </html>
